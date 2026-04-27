@@ -1,0 +1,26 @@
+{
+  "summary": "Full e2e tested AprovaMed Planner. Backend: 20/20 pytest pass (auth, dashboard, profile, CRUD on tasks/revisoes/schedule/questoes/redacoes/simulados/vestibulares, computed fields via /questoes2 /redacoes2 /simulados2). Frontend: login with demo creds, dashboard renders stats (160 dias, 1/5 tarefas, 3 revisoes, ultima redacao 860, ultimo simulado 69.44%), all 8 tabs navigate, theme toggle works (dark class on html), recharts render in Redacao and Simulados pages.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Charts (Redacao/Simulados/Questoes)", "issues": ["Recharts emits width(-1)/height(-1) warnings on initial render before container has dimensions; chart still renders correctly but warnings flood console - consider min-height on ResponsiveContainer parent"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": ["(Optional) Fix Recharts width(-1)/height(-1) console warnings by giving ResponsiveContainer a parent with explicit min-height"],
+  "critical_code_review_comments": [
+    "server.py uses deprecated @app.on_event startup/shutdown (FastAPI lifespan recommended)",
+    "CORS allow_credentials=True with allow_origins='*' is technically invalid per CORS spec; restrict origins when credentials are used",
+    "Demo seed mutates state on startup; idempotent except for password reset which is fine",
+    "Both /questoes and /questoes2 (and redacoes/simulados) routes exist - /questoes POST creates without computing erros/percentual which is inconsistent; consider removing the auto-generated POST or computing in the factory"
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo@aprovamed.com / demo123 (seeded by backend startup)",
+  "seed_data_creation": "Demo user auto-seeded by backend on startup with full sample data (tasks, revisoes, schedule, 8 questoes, 3 redacoes, 3 simulados, 3 vestibulares).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file at /app/backend/tests/backend_test.py covers all critical endpoints. Demo creds seeded on startup. All 20 tests pass. Use BASE_URL from REACT_APP_BACKEND_URL."
+}

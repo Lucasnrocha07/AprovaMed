@@ -1,0 +1,124 @@
+{
+  "theme": "LIGHT with Neo-Brutalist elements (Dark mode toggle support)",
+  "archetype": "Archetype 3 (Pastel & Soft) + E1's Neo-Brutalist Twist",
+  "persona": "E1 The Anti-AI Designer",
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Figtree",
+    "font_setup": "yarn add @fontsource/outfit @fontsource/figtree",
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter font-black",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body": "text-base leading-relaxed font-medium",
+      "small": "text-sm font-medium",
+      "overline": "text-xs tracking-[0.2em] uppercase font-bold"
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#FDFDF9",
+      "foreground": "#111111",
+      "card": "#FFFFFF",
+      "card_foreground": "#111111",
+      "primary": "#BAE6FD",
+      "primary_foreground": "#111111",
+      "secondary": "#FDE047",
+      "secondary_foreground": "#111111",
+      "accent_mint": "#A7F3D0",
+      "accent_lavender": "#D8B4FE",
+      "accent_peach": "#FFDAB9",
+      "accent_blue": "#93C5FD",
+      "accent_pink": "#FBCFE8",
+      "border": "#111111",
+      "input": "#111111",
+      "ring": "#111111",
+      "muted": "#F3F4F6",
+      "muted_foreground": "#4B5563"
+    },
+    "dark": {
+      "background": "#111111",
+      "foreground": "#FDFDF9",
+      "card": "#1A1A1A",
+      "card_foreground": "#FDFDF9",
+      "primary": "#38BDF8",
+      "primary_foreground": "#111111",
+      "secondary": "#FACC15",
+      "secondary_foreground": "#111111",
+      "accent_mint": "#34D399",
+      "accent_lavender": "#C084FC",
+      "accent_peach": "#FB923C",
+      "accent_blue": "#60A5FA",
+      "accent_pink": "#F472B6",
+      "border": "#404040",
+      "input": "#404040",
+      "ring": "#FDFDF9",
+      "muted": "#262626",
+      "muted_foreground": "#A3A3A3"
+    }
+  },
+  "visual_language": {
+    "shadows": {
+      "neo_brutalist": "shadow-[4px_4px_0_0_rgba(17,17,17,1)]",
+      "neo_brutalist_sm": "shadow-[2px_2px_0_0_rgba(17,17,17,1)]",
+      "neo_brutalist_dark": "shadow-[4px_4px_0_0_rgba(253,253,249,1)]",
+      "neo_brutalist_dark_sm": "shadow-[2px_2px_0_0_rgba(253,253,249,1)]"
+    },
+    "borders": "border-2 border-black dark:border-white",
+    "radius": "rounded-xl",
+    "surfaces": "Use flat solid colors for cards, combined with hard borders and neo-brutalist shadows. No glassmorphism. It should feel like a physical, colorful planner.",
+    "hover_states": "hover:translate-x-[2px] hover:translate-y-[2px] transition-transform duration-200"
+  },
+  "layout_and_spacing": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_bento": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-6",
+    "padding_generous": "p-6 sm:p-8"
+  },
+  "components": {
+    "buttons": "Always use neo-brutalist solid background (primary or secondary), hard border, and block shadow. On active/press, translate by 4px so it looks like it's pushed down, and remove the shadow.",
+    "cards": "Solid background, hard border. Header sizes should be H3 or H4. Differentiate subjects using pastel background colors for subject tags/pills.",
+    "inputs": "Shadcn input with border-2 border-black, ring-offset-0. Focus should increase border thickness or change background color to very light yellow.",
+    "tabs": "Override Shadcn tabs to look like physical folder tabs with borders.",
+    "charts": "Recharts. Use hard colors and thick stroke lines (strokeWidth={3}). Hide grid lines or make them very faint dashed lines. Tooltips should have the neo-brutalist style.",
+    "badges": "rounded-full border border-black px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-[2px_2px_0_0_#111111] dark:border-white dark:shadow-[2px_2px_0_0_#FDFDF9]"
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Duotone or Bold weight. We need thick, expressive icons to match the Neo-brutalist vibe."
+  },
+  "images": {
+    "onboarding_hero": {
+      "url": "https://images.unsplash.com/photo-1650661926447-9efb2610f64c?crop=entropy&cs=srgb&fm=jpg",
+      "description": "Aesthetic study desk with a laptop, sets the mood for focused studying on the onboarding or login screen."
+    },
+    "motivation_goal": {
+      "url": "https://images.unsplash.com/photo-1674702734929-2f301792ddae?crop=entropy&cs=srgb&fm=jpg",
+      "description": "Black and white photo of a doctor's coat and stethoscope. Use in the dashboard or an empty state as a visual reminder of the final goal (Medicina)."
+    },
+    "exhausted_student": {
+      "url": "https://images.pexels.com/photos/4769486/pexels-photo-4769486.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "A student overwhelmed. Could be used creatively in a 'Don't give up / Take a break' section or error/404 page."
+    }
+  },
+  "features": {
+    "dashboard": "Bento-style layout. Prominent 'Estudar Hoje' quick-start button. Progress rings/bars for weekly goals.",
+    "estudar_hoje": "Task list with checkboxes. When checked, add a strikethrough animation. Color-code tasks by subject (e.g., Biologia = Mint, Matemática = Blue, Redação = Peach).",
+    "revisoes": "Use Shadcn Accordion or Cards to display 2-week spaced repetition intervals. Visual timelines for each 'frente'.",
+    "cronograma": "Timetable view. Use CSS Grid for hours of the day.",
+    "questoes_simulados": "Recharts for progress. 'Acertos' in mint green, 'Erros' in pastel red/peach.",
+    "redacao": "Score breakdown (C1-C5). Use radar chart or simple thick bar charts."
+  },
+  "instructions_to_main_agent": [
+    "Build the UI focusing heavily on the Neo-Brutalist design language: thick borders (border-2 border-black), solid pastel backgrounds, and sharp drop shadows.",
+    "Use 'Outfit' for all headings and 'Figtree' for body text. Ensure you install these fonts.",
+    "All interactive elements must have the 'hover:-translate-x-[2px] hover:-translate-y-[2px] active:translate-x-[0px] active:translate-y-[0px]' interaction to simulate a physical button press.",
+    "Install and use @phosphor-icons/react with 'weight=\"bold\"' or 'weight=\"duotone\"' to match the bold UI.",
+    "Implement Recharts for Simulados and Questões evolution. Keep charts minimalist but bold (thick lines, no soft gradients).",
+    "When applying dark mode, invert the black borders/text to white, and use the 'dark' palette colors provided.",
+    "Every actionable element MUST have a 'data-testid' attribute.",
+    "For form fields in Login/Onboarding, use highly contrasting active states (e.g., focus:bg-yellow-50).",
+    "Since it's mobile-first, ensure the bento grid degrades gracefully into a single column with ample spacing (gap-6) and large touch targets (min-h-[48px]).",
+    "Ensure UI strings and Date formats perfectly match pt-BR (DD/MM/AAAA)."
+  ]
+}

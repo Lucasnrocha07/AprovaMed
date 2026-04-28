@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, BookMarked, Calendar as CalendarIcon } from "lucide-react";
 import { formatDate } from "@/lib/subjects";
 
-const empty = () => ({ nome: "", conteudos: "", datas: "", data_prova: "", estrategias: "", observacoes: "" });
+const empty = () => ({ nome: "", conteudos: "", data_prova: "", estrategias: "", observacoes: "" });
 
 const daysUntil = (iso) => {
   if (!iso) return null;
@@ -84,7 +84,6 @@ export default function Vestibulares() {
                 </div>
                 {v.data_prova && <div className="mt-2 text-xs font-bold text-zinc-800 flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> Prova: {formatDate(v.data_prova)}</div>}
                 <Field label="Conteúdos" value={v.conteudos} />
-                <Field label="Datas" value={v.datas} />
                 <Field label="Estratégias" value={v.estrategias} />
                 <Field label="Observações" value={v.observacoes} />
                 <div className="flex gap-2 mt-3">
@@ -112,10 +111,6 @@ export default function Vestibulares() {
             <div>
               <Label className="font-bold">Conteúdos importantes</Label>
               <Textarea className="nb-border mt-1" value={form.conteudos} onChange={(e) => setForm({ ...form, conteudos: e.target.value })} data-testid="vest-form-conteudos" />
-            </div>
-            <div>
-              <Label className="font-bold">Datas (livre)</Label>
-              <Textarea className="nb-border mt-1" value={form.datas} onChange={(e) => setForm({ ...form, datas: e.target.value })} data-testid="vest-form-datas" />
             </div>
             <div>
               <Label className="font-bold">Estratégias</Label>

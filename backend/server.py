@@ -12,7 +12,7 @@ import jwt
 from datetime import datetime, timezone, timedelta, date
 from typing import List, Optional, Literal
 
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -189,7 +189,22 @@ class CalendarioIn(BaseModel):
     titulo: str
     data: str
     hora: Optional[str] = None
+    tipo: Literal["evento", "observacao", "prova", "simulado", "lembrete", "tarefa"] = "evento"
+    prioridade: Literal["baixa", "media", "alta"] = "media"
+    concluido: bool = False
     observacoes: str = ""
+
+
+class CronogramaFixoIn(BaseModel):
+    dia_semana: int  # 0=Seg..6=Dom
+    bloco: Literal["manha", "tarde", "noite"]
+    hora_inicio: Optional[str] = None
+    hora_fim: Optional[str] = None
+    materia: str
+    frente: Optional[str] = None
+    tipo: Literal["teoria", "revisao", "questoes", "redacao", "outro"] = "teoria"
+    observacoes: str = ""
+    concluido: bool = False
 
 
 class NotaIn(BaseModel):
@@ -358,6 +373,7 @@ make_crud("vestibulares", "vestibulares", VestibularIn)
 make_crud("calendario", "calendario", CalendarioIn)
 make_crud("notas", "notas", NotaIn)
 make_crud("decks", "flashcard_decks", DeckIn)
+make_crud("cronograma-fixo", "cronograma_fixo", CronogramaFixoIn)
 
 
 # ---- Flashcards ----
@@ -579,6 +595,113 @@ async def import_flashcards(body: ImportIn, user: dict = Depends(get_current_use
     return {"created": created}
 
 
+def _strip_html(s: str) -> str:
+    import re
+    s = re.sub(r"<br\s*/?>", "\n", s or "", flags=re.I)
+    s = re.sub(r"<[^>]+>", " ", s)
+    s = s.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'")
+    return re.sub(r"[ \t]+", " ", s).strip()
+
+
+@api.post("/flashcards/import-apkg")
+async def import_apkg(
+    file: UploadFile = File(...),
+    materia: Optional[str] = Form(None),
+    frente: Optional[str] = Form(None),
+    deck_name: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    """Importa um arquivo .apkg do Anki. Cria 1 baralho com todos os cartões."""
+    import tempfile
+    import zipfile
+    import sqlite3
+    import json
+    import os as _os
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Arquivo vazio")
+    with tempfile.TemporaryDirectory() as td:
+        apkg_path = _os.path.join(td, "deck.apkg")
+        with open(apkg_path, "wb") as f:
+            f.write(content)
+        try:
+            with zipfile.ZipFile(apkg_path) as z:
+                names = z.namelist()
+                db_name = None
+                for candidate in ("collection.anki21b", "collection.anki21", "collection.anki2"):
+                    if candidate in names:
+                        db_name = candidate
+                        break
+                if not db_name:
+                    raise HTTPException(status_code=400, detail="Arquivo .apkg inválido (collection.anki não encontrado)")
+                # Skip .anki21b (compressed with zstd - not supported without extra deps)
+                if db_name == "collection.anki21b":
+                    # Try fallback
+                    if "collection.anki21" in names:
+                        db_name = "collection.anki21"
+                    elif "collection.anki2" in names:
+                        db_name = "collection.anki2"
+                    else:
+                        raise HTTPException(status_code=400, detail="Formato .anki21b compactado não suportado. Exporte com 'Suporte a versões antigas do Anki' marcado.")
+                z.extract(db_name, td)
+        except zipfile.BadZipFile:
+            raise HTTPException(status_code=400, detail="Arquivo .apkg corrompido ou não é um zip válido")
+        conn = sqlite3.connect(_os.path.join(td, db_name))
+        cur = conn.cursor()
+        # Deck name
+        try:
+            row = cur.execute("SELECT decks FROM col").fetchone()
+            decks_json = json.loads(row[0]) if row else {}
+            # pick first non-Default deck
+            candidates = [d.get("name", "") for d in decks_json.values() if d.get("name") and d.get("name") != "Default"]
+            default_name = candidates[0] if candidates else (file.filename or "Baralho").replace(".apkg", "").replace(".zip", "")
+        except Exception:
+            default_name = (file.filename or "Baralho").replace(".apkg", "").replace(".zip", "")
+        final_deck_name = (deck_name or default_name).strip()[:120] or "Baralho importado"
+        # Notes
+        try:
+            rows = cur.execute("SELECT flds, tags FROM notes").fetchall()
+        except sqlite3.DatabaseError as e:
+            conn.close()
+            raise HTTPException(status_code=400, detail=f"Erro lendo notas do Anki: {e}")
+        conn.close()
+    # Create deck
+    deck_id = str(uuid.uuid4())
+    await db.flashcard_decks.insert_one({
+        "id": deck_id, "user_id": user["id"],
+        "nome": final_deck_name, "materia": materia or None, "frente": frente or None,
+        "descricao": f"Importado de {file.filename}", "tags": [],
+        "created_at": now_iso(),
+    })
+    today = today_str()
+    created = 0
+    seen = set()
+    for flds, tags in rows:
+        parts = (flds or "").split("\x1f")
+        if len(parts) < 2:
+            continue
+        perg = _strip_html(parts[0])
+        resp = _strip_html(parts[1])
+        if not perg or not resp:
+            continue
+        key = (perg[:200], resp[:200])
+        if key in seen:
+            continue
+        seen.add(key)
+        tag_list = [t for t in (tags or "").split() if t]
+        await db.flashcards.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user["id"],
+            "pergunta": perg, "resposta": resp,
+            "materia": materia or None, "frente": frente or None, "deck_id": deck_id,
+            "tags": tag_list, "dificuldade": 0, "status": "novo",
+            "intervalo": 0, "ease": 2.5, "proxima_revisao": today,
+            "revisoes": 0, "acertos": 0, "erros": 0, "historico": [], "suspenso": False,
+            "created_at": now_iso(),
+        })
+        created += 1
+    return {"deck_id": deck_id, "deck_name": final_deck_name, "created": created}
+
+
 @api.get("/decks-stats")
 async def decks_with_stats(user: dict = Depends(get_current_user)):
     """Returns decks enriched with card counts / progress."""
@@ -628,8 +751,7 @@ def _build_semanas():
             "num": n,
             "materia1": [{"label": x, "concluido": False, "observacoes": ""} for x in t["materia1"]],
             "materia2": [{"label": x, "concluido": False, "observacoes": ""} for x in t["materia2"]],
-            "modulos": [{"label": "", "concluido": False, "observacoes": ""} for _ in range(7)],
-            "exercicios": [{"label": "", "concluido": False, "observacoes": ""} for _ in range(7)],
+            "exercicios": [{"label": "", "observacoes": ""} for _ in range(7)],
         })
     return out
 
@@ -778,13 +900,13 @@ async def dashboard(user: dict = Depends(get_current_user)):
         {"user_id": user["id"], "data": {"$gte": today_str()}}, {"_id": 0}
     ).sort("data", 1).to_list(20)
 
-    # Conjuntos: progresso
+    # Conjuntos: progresso (ignora 'modulos' e 'exercicios' — apenas Matéria 1 + Matéria 2)
     conjuntos = await db.conjuntos.find({"user_id": user["id"]}, {"_id": 0}).to_list(50)
     conjuntos_progress = []
     for c in conjuntos:
         total = done = 0
         for s in c.get("semanas", []):
-            for k in ("materia1", "materia2", "modulos", "exercicios"):
+            for k in ("materia1", "materia2"):
                 for cell in s.get(k, []):
                     if cell.get("label"):
                         total += 1

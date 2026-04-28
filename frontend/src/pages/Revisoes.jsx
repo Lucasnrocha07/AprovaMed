@@ -11,10 +11,9 @@ import { Plus, Pencil, Trash2, Check } from "lucide-react";
 
 const SHORT_DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const ROWS = [
-  { key: "materia1", label: "Matéria 1" },
-  { key: "materia2", label: "Matéria 2" },
-  { key: "modulos", label: "Módulos" },
-  { key: "exercicios", label: "Exercícios" },
+  { key: "materia1", label: "Matéria 1", checkable: true },
+  { key: "materia2", label: "Matéria 2", checkable: true },
+  { key: "exercicios", label: "Exercícios", checkable: false },
 ];
 
 const addDaysISO = (iso, n) => {
@@ -88,7 +87,7 @@ export default function Revisoes() {
     if (!selected) return { total: 0, done: 0 };
     let total = 0, done = 0;
     for (const s of selected.semanas || []) {
-      for (const k of ROWS.map(r => r.key)) {
+      for (const k of ["materia1", "materia2"]) {
         for (const c of s[k] || []) {
           if (c.label) { total++; if (c.concluido) done++; }
         }
@@ -168,7 +167,7 @@ export default function Revisoes() {
                         <div key={row.key} className="grid grid-cols-8 border-b-2 border-foreground last:border-b-0">
                           <div className="p-2 font-bold text-sm bg-muted/50">{row.label}</div>
                           {(sem[row.key] || []).map((cell, cIdx) => (
-                            <CellBox key={cIdx} cell={cell} onToggle={() => toggleCell(sIdx, row.key, cIdx)} onEdit={() => openCellEditor(sIdx, row.key, cIdx)} />
+                            <CellBox key={cIdx} cell={cell} checkable={row.checkable} onToggle={() => toggleCell(sIdx, row.key, cIdx)} onEdit={() => openCellEditor(sIdx, row.key, cIdx)} />
                           ))}
                         </div>
                       ))}
@@ -187,7 +186,7 @@ export default function Revisoes() {
                               <div key={row.key} className="flex items-center gap-2">
                                 <div className="text-[10px] font-black uppercase w-14 shrink-0 text-muted-foreground">{row.label}</div>
                                 <div className="flex-1">
-                                  <CellBox cell={cell} onToggle={() => toggleCell(sIdx, row.key, cIdx)} onEdit={() => openCellEditor(sIdx, row.key, cIdx)} />
+                                  <CellBox cell={cell} checkable={row.checkable} onToggle={() => toggleCell(sIdx, row.key, cIdx)} onEdit={() => openCellEditor(sIdx, row.key, cIdx)} />
                                 </div>
                               </div>
                             );
@@ -263,7 +262,7 @@ export default function Revisoes() {
   );
 }
 
-const CellBox = ({ cell, onToggle, onEdit }) => {
+const CellBox = ({ cell, onToggle, onEdit, checkable = true }) => {
   const empty = !cell.label;
   const special = cell.label === "SIMULADO" || cell.label === "COMPLETAR";
   const bg = cell.concluido ? "bg-emerald-200"
@@ -272,12 +271,16 @@ const CellBox = ({ cell, onToggle, onEdit }) => {
     : "bg-primary/30";
   return (
     <div className={`${bg} p-2 border-l-2 border-foreground min-h-[60px] flex items-start gap-1 group`}>
-      <button onClick={onToggle} className={`shrink-0 w-5 h-5 nb-border rounded grid place-items-center bg-white ${cell.concluido ? "bg-emerald-300" : ""}`}>
-        {cell.concluido && <Check className="w-3 h-3" strokeWidth={3} />}
-      </button>
+      {checkable ? (
+        <button onClick={onToggle} className={`shrink-0 w-5 h-5 nb-border rounded grid place-items-center bg-white ${cell.concluido ? "bg-emerald-300" : ""}`}>
+          {cell.concluido && <Check className="w-3 h-3" strokeWidth={3} />}
+        </button>
+      ) : (
+        <div className="shrink-0 w-5 h-5" />
+      )}
       <button onClick={onEdit} className="flex-1 text-left min-w-0">
-        <div className={`text-xs font-bold leading-tight ${cell.concluido ? "line-through" : ""} ${empty ? "text-muted-foreground italic" : ""}`}>
-          {cell.label || "Adicionar"}
+        <div className={`text-xs font-bold leading-tight ${cell.concluido && checkable ? "line-through" : ""} ${empty ? "text-muted-foreground italic" : ""}`}>
+          {cell.label || (checkable ? "Adicionar" : "Anotar...")}
         </div>
         {cell.observacoes && <div className="text-[10px] text-muted-foreground truncate">{cell.observacoes}</div>}
       </button>

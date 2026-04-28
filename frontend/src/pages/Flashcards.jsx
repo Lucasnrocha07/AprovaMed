@@ -81,6 +81,11 @@ export default function Flashcards() {
   const [openImport, setOpenImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importDeckId, setImportDeckId] = useState("");
+  const [apkgFile, setApkgFile] = useState(null);
+  const [apkgMateria, setApkgMateria] = useState("");
+  const [apkgFrente, setApkgFrente] = useState("");
+  const [apkgDeckName, setApkgDeckName] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const loadAll = async () => {
     const [d, s] = await Promise.all([api.get("/decks-stats"), api.get("/flashcards/stats")]);
@@ -158,10 +163,18 @@ export default function Flashcards() {
   const openImportDialog = () => {
     setImportText("");
     setImportDeckId(selectedDeck || (decks[0]?.id ?? ""));
+    setApkgFile(null); setApkgMateria(""); setApkgFrente(""); setApkgDeckName("");
     setOpenImport(true);
   };
   const onFilePicked = (file) => {
     if (!file) return;
+    // If .apkg, store for apkg import; otherwise read as text
+    if ((file.name || "").toLowerCase().endsWith(".apkg")) {
+      setApkgFile(file);
+      setApkgDeckName((file.name || "").replace(/\.apkg$/i, ""));
+      toast.info(".apkg detectado — preencha os campos e clique em Importar .apkg");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => setImportText(String(e.target?.result || ""));
     reader.readAsText(file);
@@ -171,14 +184,32 @@ export default function Flashcards() {
     const rows = parseDelimited(importText);
     if (!rows.length) { toast.error("Nenhum cartão encontrado"); return; }
     try {
-      const { data } = await api.post("/flashcards/import", {
-        deck_id: importDeckId, cards: rows,
-      });
+      setImporting(true);
+      const { data } = await api.post("/flashcards/import", { deck_id: importDeckId, cards: rows });
       toast.success(`${data.created} cartões importados`);
       setOpenImport(false);
       setSelectedDeck(importDeckId);
       loadAll(); loadCards();
     } catch { toast.error("Erro ao importar"); }
+    finally { setImporting(false); }
+  };
+  const doImportApkg = async () => {
+    if (!apkgFile) { toast.error("Selecione um arquivo .apkg"); return; }
+    try {
+      setImporting(true);
+      const fd = new FormData();
+      fd.append("file", apkgFile);
+      if (apkgMateria) fd.append("materia", apkgMateria);
+      if (apkgFrente) fd.append("frente", apkgFrente);
+      if (apkgDeckName) fd.append("deck_name", apkgDeckName);
+      const { data } = await api.post("/flashcards/import-apkg", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success(`Baralho "${data.deck_name}" importado (${data.created} cartões)`);
+      setOpenImport(false);
+      setSelectedDeck(data.deck_id);
+      loadAll(); loadCards();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao importar .apkg");
+    } finally { setImporting(false); }
   };
 
   // filtered cards
@@ -435,38 +466,88 @@ export default function Flashcards() {
       <Dialog open={openImport} onOpenChange={setOpenImport}>
         <DialogContent className="nb-border max-w-2xl">
           <DialogHeader><DialogTitle className="font-heading text-2xl font-black">Importar flashcards</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="bg-primary/30 nb-border rounded-lg p-3 text-xs">
-              <strong>Instruções:</strong> envie <b>CSV, TSV ou TXT</b> com as colunas <code>pergunta, resposta, materia, frente, baralho, tags</code>.
-              Se o arquivo tiver apenas 2 colunas, usaremos coluna 1 = pergunta e coluna 2 = resposta.
-              <br />XLSX e .apkg ainda não são suportados — por favor converta para CSV.
+              <strong>.apkg (Anki):</strong> cria um novo baralho automaticamente (um .apkg = um baralho). Para importar CSV/TSV/TXT, escolha um baralho existente abaixo.
+              <br /><strong>CSV/TSV/TXT:</strong> colunas reconhecidas: <code>pergunta, resposta, materia, frente, baralho, tags</code>. Com apenas 2 colunas: col1=pergunta, col2=resposta.
+              <br /><span className="text-muted-foreground">XLSX ainda não suportado — converta para CSV.</span>
             </div>
-            <div>
-              <Label className="font-bold">Baralho destino</Label>
-              <Select value={importDeckId} onValueChange={setImportDeckId}>
-                <SelectTrigger className="nb-border h-11 mt-1" data-testid="import-deck"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {decks.map((d) => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="font-bold">Arquivo CSV/TSV/TXT</Label>
-              <Input type="file" accept=".csv,.tsv,.txt" onChange={(e) => onFilePicked(e.target.files?.[0])} className="nb-border h-11 mt-1" data-testid="import-file" />
-            </div>
-            <div>
-              <Label className="font-bold">Ou cole o conteúdo</Label>
-              <Textarea className="nb-border mt-1 min-h-[160px] font-mono text-xs" value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="pergunta,resposta,materia,frente,baralho,tags" data-testid="import-text" />
-            </div>
-            {importText && (
-              <div className="text-xs font-bold text-muted-foreground">
-                Preview: {parseDelimited(importText).length} cartões detectados
+
+            {/* APKG section */}
+            <div className="border-2 border-foreground rounded-xl p-3 bg-accent/20 space-y-2">
+              <div className="font-heading font-black text-sm">Importar .apkg (Anki)</div>
+              <div>
+                <Label className="font-bold text-xs">Arquivo .apkg</Label>
+                <Input type="file" accept=".apkg" onChange={(e) => onFilePicked(e.target.files?.[0])} className="nb-border h-10 mt-1" data-testid="import-file" />
               </div>
-            )}
+              {apkgFile && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="font-bold text-xs">Nome do baralho</Label>
+                      <Input className="nb-border h-10 mt-1" value={apkgDeckName} onChange={(e) => setApkgDeckName(e.target.value)} data-testid="apkg-deck-name" />
+                    </div>
+                    <div>
+                      <Label className="font-bold text-xs">Matéria (opcional)</Label>
+                      <Select value={apkgMateria || "none"} onValueChange={(v) => { setApkgMateria(v === "none" ? "" : v); setApkgFrente(""); }}>
+                        <SelectTrigger className="nb-border h-10 mt-1" data-testid="apkg-materia"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {SUBJECT_NAMES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="font-bold text-xs">Frente (opcional)</Label>
+                      <Select value={apkgFrente || "none"} onValueChange={(v) => setApkgFrente(v === "none" ? "" : v)} disabled={!frentesFor(apkgMateria).length}>
+                        <SelectTrigger className="nb-border h-10 mt-1" data-testid="apkg-frente"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {frentesFor(apkgMateria).map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button onClick={doImportApkg} disabled={importing} className="w-full nb-border nb-shadow bg-accent text-accent-foreground hover:bg-accent font-bold" data-testid="apkg-import-do">
+                    {importing ? "Importando..." : "Importar .apkg"}
+                  </Button>
+                  <div className="text-[10px] text-muted-foreground">Se o arquivo usar o novo formato compactado (.anki21b), exporte do Anki marcando "Suporte a versões antigas do Anki".</div>
+                </>
+              )}
+            </div>
+
+            {/* CSV section */}
+            <div className="border-2 border-foreground rounded-xl p-3 space-y-2">
+              <div className="font-heading font-black text-sm">Importar CSV/TSV/TXT</div>
+              <div>
+                <Label className="font-bold text-xs">Baralho destino</Label>
+                <Select value={importDeckId} onValueChange={setImportDeckId}>
+                  <SelectTrigger className="nb-border h-10 mt-1" data-testid="import-deck"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {decks.map((d) => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-bold text-xs">Arquivo CSV/TSV/TXT</Label>
+                <Input type="file" accept=".csv,.tsv,.txt" onChange={(e) => onFilePicked(e.target.files?.[0])} className="nb-border h-10 mt-1" data-testid="import-file-csv" />
+              </div>
+              <div>
+                <Label className="font-bold text-xs">Ou cole o conteúdo</Label>
+                <Textarea className="nb-border mt-1 min-h-[120px] font-mono text-xs" value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="pergunta,resposta,materia,frente,baralho,tags" data-testid="import-text" />
+              </div>
+              {importText && (
+                <div className="text-xs font-bold text-muted-foreground">
+                  Preview: {parseDelimited(importText).length} cartões detectados
+                </div>
+              )}
+              <Button onClick={doImport} disabled={importing || !importText} className="w-full nb-border nb-shadow bg-secondary text-secondary-foreground hover:bg-secondary font-bold" data-testid="import-do">
+                {importing ? "Importando..." : "Importar texto"}
+              </Button>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="nb-border" onClick={() => setOpenImport(false)}>Cancelar</Button>
-            <Button onClick={doImport} className="nb-border nb-shadow bg-secondary text-secondary-foreground hover:bg-secondary font-bold" data-testid="import-do">Importar</Button>
+            <Button variant="outline" className="nb-border" onClick={() => setOpenImport(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

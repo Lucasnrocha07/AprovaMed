@@ -127,18 +127,24 @@ export default function Dashboard() {
             <div className="text-sm text-muted-foreground py-4 text-center">Nenhum evento. <Link className="font-bold underline" to="/calendario">Adicione um</Link>.</div>
           ) : (
             <ul className="space-y-2">
-              {data.eventos_proximos.slice(0, 5).map((e) => (
+              {data.eventos_proximos.slice(0, 5).map((e) => {
+                const tone = e.tipo === "prova" ? "bg-red-300" : e.tipo === "simulado" ? "bg-accent" : e.tipo === "lembrete" ? "bg-secondary" : e.tipo === "tarefa" ? "bg-emerald-300" : "bg-primary/40";
+                return (
                 <li key={e.id} className="p-3 nb-border rounded-xl bg-background flex items-center gap-3" data-testid={`dash-ev-${e.id}`}>
-                  <div className="bg-secondary/60 nb-border rounded-xl px-2 py-1 text-center shrink-0">
-                    <div className="text-[9px] font-bold uppercase">{new Date(e.data + "T00:00:00").toLocaleDateString("pt-BR", { month: "short" })}</div>
-                    <div className="font-heading text-lg font-black leading-none">{e.data.slice(8, 10)}</div>
+                  <div className={`${tone} nb-border rounded-xl px-2 py-1 text-center shrink-0`}>
+                    <div className="text-[9px] font-bold uppercase text-zinc-800">{new Date(e.data + "T00:00:00").toLocaleDateString("pt-BR", { month: "short" })}</div>
+                    <div className="font-heading text-lg font-black leading-none text-zinc-900">{e.data.slice(8, 10)}</div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-bold truncate">{e.titulo}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {e.tipo && <span className="text-[9px] font-black uppercase tracking-wider bg-white/70 px-1.5 py-0.5 rounded nb-border text-zinc-800">{e.tipo}</span>}
+                      {e.prioridade === "alta" && <span className="text-[9px] font-black uppercase text-red-700 bg-white/70 px-1.5 py-0.5 rounded nb-border">Alta</span>}
+                    </div>
+                    <div className={`font-bold truncate ${e.concluido ? "line-through opacity-70" : ""}`}>{e.titulo}</div>
                     {e.hora && <div className="text-xs text-muted-foreground">{e.hora}</div>}
                   </div>
                 </li>
-              ))}
+              );})}
             </ul>
           )}
         </div>

@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDate, todayISO } from "@/lib/subjects";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-const empty = () => ({ tema: "", data: todayISO(), c1: 160, c2: 160, c3: 160, c4: 160, c5: 160, observacoes: "" });
+const empty = () => ({ tema: "", data: todayISO(), tipo: "enem", c1: 160, c2: 160, c3: 160, c4: 160, c5: 160, nota_livre: 0, observacoes: "" });
 
 export default function Redacao() {
   const [items, setItems] = useState([]);
@@ -25,13 +26,18 @@ export default function Redacao() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setForm(empty()); setEditing(null); setOpen(true); };
-  const openEdit = (r) => { setForm({ ...r }); setEditing(r.id); setOpen(true); };
+  const openEdit = (r) => { setForm({ ...empty(), ...r }); setEditing(r.id); setOpen(true); };
 
   const save = async () => {
     try {
-      const payload = { ...form, c1: parseInt(form.c1), c2: parseInt(form.c2), c3: parseInt(form.c3), c4: parseInt(form.c4), c5: parseInt(form.c5) };
+      const payload = {
+        tema: form.tema, data: form.data, tipo: form.tipo,
+        c1: parseInt(form.c1 || 0), c2: parseInt(form.c2 || 0), c3: parseInt(form.c3 || 0), c4: parseInt(form.c4 || 0), c5: parseInt(form.c5 || 0),
+        nota_livre: form.nota_livre === "" || form.nota_livre == null ? null : parseFloat(form.nota_livre),
+        observacoes: form.observacoes,
+      };
       if (editing) await api.put(`/redacoes/${editing}`, payload);
-      else await api.post("/redacoes2", payload);
+      else await api.post("/redacoes", payload);
       setOpen(false); load(); toast.success("Salvo");
     } catch { toast.error("Erro"); }
   };
@@ -80,7 +86,10 @@ export default function Redacao() {
             <li key={r.id} className="bg-card nb-border nb-shadow rounded-2xl p-4" data-testid={`redacao-${r.id}`}>
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-muted-foreground">{formatDate(r.data)}</div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                    {formatDate(r.data)}
+                    <span className="px-2 py-0.5 rounded-full nb-border bg-secondary/60 uppercase text-[9px] tracking-wider">{r.tipo || "enem"}</span>
+                  </div>
                   <div className="font-heading text-xl font-black">{r.tema}</div>
                 </div>
                 <div className="text-right">
@@ -88,14 +97,16 @@ export default function Redacao() {
                   <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nota total</div>
                 </div>
               </div>
-              <div className="grid grid-cols-5 gap-2 mt-3">
-                {["c1", "c2", "c3", "c4", "c5"].map((c) => (
-                  <div key={c} className="bg-primary/30 nb-border rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-black uppercase">{c.toUpperCase()}</div>
-                    <div className="font-heading font-black text-lg">{r[c]}</div>
-                  </div>
-                ))}
-              </div>
+              {(r.tipo || "enem") === "enem" && (
+                <div className="grid grid-cols-5 gap-2 mt-3">
+                  {["c1", "c2", "c3", "c4", "c5"].map((c) => (
+                    <div key={c} className="bg-primary/30 nb-border rounded-lg p-2 text-center">
+                      <div className="text-[10px] font-black uppercase">{c.toUpperCase()}</div>
+                      <div className="font-heading font-black text-lg">{r[c]}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {r.observacoes && <div className="text-xs text-muted-foreground mt-2">{r.observacoes}</div>}
               <div className="flex gap-2 mt-3">
                 <Button size="sm" variant="outline" className="nb-border h-8" onClick={() => openEdit(r)} data-testid={`red-edit-${r.id}`}><Pencil className="w-3 h-3 mr-1" /> Editar</Button>
@@ -111,6 +122,16 @@ export default function Redacao() {
           <DialogHeader><DialogTitle className="font-heading text-2xl font-black">{editing ? "Editar redação" : "Nova redação"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
+              <Label className="font-bold">Tipo</Label>
+              <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
+                <SelectTrigger className="nb-border h-11 mt-1" data-testid="red-form-tipo"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="enem">ENEM (C1 a C5)</SelectItem>
+                  <SelectItem value="outro">Outro (nota livre)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="font-bold">Tema</Label>
               <Input className="nb-border h-11 mt-1" value={form.tema} onChange={(e) => setForm({ ...form, tema: e.target.value })} data-testid="red-form-tema" />
             </div>
@@ -118,14 +139,21 @@ export default function Redacao() {
               <Label className="font-bold">Data</Label>
               <Input type="date" className="nb-border h-11 mt-1" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} data-testid="red-form-data" />
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              {["c1", "c2", "c3", "c4", "c5"].map((c) => (
-                <div key={c}>
-                  <Label className="font-bold uppercase">{c}</Label>
-                  <Input type="number" min="0" max="200" step="20" className="nb-border h-11 mt-1" value={form[c]} onChange={(e) => setForm({ ...form, [c]: e.target.value })} data-testid={`red-form-${c}`} />
-                </div>
-              ))}
-            </div>
+            {form.tipo === "enem" ? (
+              <div className="grid grid-cols-5 gap-2">
+                {["c1", "c2", "c3", "c4", "c5"].map((c) => (
+                  <div key={c}>
+                    <Label className="font-bold uppercase">{c}</Label>
+                    <Input type="number" min="0" max="200" step="20" className="nb-border h-11 mt-1" value={form[c]} onChange={(e) => setForm({ ...form, [c]: e.target.value })} data-testid={`red-form-${c}`} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <Label className="font-bold">Nota livre</Label>
+                <Input type="number" step="0.01" className="nb-border h-11 mt-1" value={form.nota_livre ?? 0} onChange={(e) => setForm({ ...form, nota_livre: e.target.value })} data-testid="red-form-livre" />
+              </div>
+            )}
             <div>
               <Label className="font-bold">Observações</Label>
               <Textarea className="nb-border mt-1" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} data-testid="red-form-obs" />

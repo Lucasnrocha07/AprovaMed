@@ -37,7 +37,7 @@ export default function Simulados() {
       };
       if (payload.acertos > payload.total_questoes) { toast.error("Acertos > total"); return; }
       if (editing) await api.put(`/simulados/${editing}`, payload);
-      else await api.post("/simulados2", payload);
+      else await api.post("/simulados", payload);
       setOpen(false); load(); toast.success("Salvo");
     } catch { toast.error("Erro"); }
   };

@@ -9,13 +9,16 @@ import Register from "@/pages/Register";
 import Onboarding from "@/pages/Onboarding";
 import AppShell from "@/components/layout/AppShell";
 import Dashboard from "@/pages/Dashboard";
-import EstudarHoje from "@/pages/EstudarHoje";
 import Revisoes from "@/pages/Revisoes";
 import Cronograma from "@/pages/Cronograma";
+import Calendario from "@/pages/Calendario";
 import Questoes from "@/pages/Questoes";
 import Redacao from "@/pages/Redacao";
 import Simulados from "@/pages/Simulados";
 import Vestibulares from "@/pages/Vestibulares";
+import Notas from "@/pages/Notas";
+import Flashcards from "@/pages/Flashcards";
+import FlashcardsEstudar from "@/pages/FlashcardsEstudar";
 
 const Protected = ({ children }) => {
   const { user, loading } = useAuth();
@@ -40,12 +43,15 @@ function AppRoutes() {
 
       <Route path="/" element={<Protected><AppShell /></Protected>}>
         <Route index element={<Dashboard />} />
-        <Route path="estudar-hoje" element={<EstudarHoje />} />
         <Route path="revisoes" element={<Revisoes />} />
         <Route path="cronograma" element={<Cronograma />} />
+        <Route path="calendario" element={<Calendario />} />
+        <Route path="flashcards" element={<Flashcards />} />
+        <Route path="flashcards/estudar" element={<FlashcardsEstudar />} />
         <Route path="questoes" element={<Questoes />} />
         <Route path="redacao" element={<Redacao />} />
         <Route path="simulados" element={<Simulados />} />
+        <Route path="notas" element={<Notas />} />
         <Route path="vestibulares" element={<Vestibulares />} />
       </Route>
 

@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 2 full e2e verified. Backend 35/35 pytest pass covering auth, dashboard (new fields: vestibulares_proximos with countdown, eventos_proximos, conjuntos_progress, flashcards_due/atrasados), profile, full CRUD on tasks/revisoes/schedule/questoes/redacoes/simulados/vestibulares/calendario/notas/decks, conjuntos auto-template (Mat A/Fís C/Quí B/Bio C/Mat B/SIMULADO/COMPLETAR + História A/Linguagens/Geografia A-B/Filosofia/Química A/SIMULADO/COMPLETAR for S1; Física A/Química C/Biologia A/Matemática C/Física B + Sociologia/Linguagens/Geografia C/D/História B-C/Biologia B for S2), flashcards CRUD + due + stats + suspend toggle + import (JSON) + SM-2 review (errei→int=0/aprendendo, bom novo→int=3, fácil novo→int=5), redação tipo enem (sum) e outro (nota_livre), vestibular data_prova com dias_restantes em /dashboard. Frontend: login redirects to dashboard; dashboard shows countdowns (159d UFMG, 220d UNIMONTES, 180d UFU), conjuntos progress, eventos próximos, flashcards hoje, meta semanal. Nav has 10 items (Dashboard/Revisões/Cronograma/Calendário/Flashcards/Questões/Redação/Simulados/Anotações/Vestibulares) with no 'Estudar Hoje'. Revisões page renders Conjunto grid 7×4 with new frente labels & SIMULADO/COMPLETAR markers. Cronograma 7×3 (Seg-Dom × Manhã/Tarde/Noite). Flashcards page lists decks/cards with filters; Estudar Agora navigates to /flashcards/estudar with question card + 'Mostrar resposta'. All 10 routes load without JS pageerror.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Charts (Redacao/Simulados)", "issues": ["Recharts width(-1)/height(-1) console warnings persist (already noted iter 1) - non-blocking; consider explicit min-height on ResponsiveContainer parent"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional, non-blocking) seed_demo only seeds on first creation - existing demo users created before iteration 2 will not have notas/calendario/conjuntos/decks unless DB is wiped. Consider an idempotent upsert seed for new collections so existing demo accounts gain new sample data.",
+    "(Optional) Suppress Recharts width/height(-1) warnings via min-height on chart containers."
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~1070 lines - close to the 700-line guideline; consider splitting into routers (auth.py, flashcards.py, conjuntos.py, dashboard.py).",
+    "CORS still uses allow_credentials=True with allow_origins='*' default which is invalid per CORS spec when CORS_ORIGINS env unset.",
+    "@app.on_event('startup'/'shutdown') still deprecated - migrate to FastAPI lifespan.",
+    "_sm_update increments revisoes counter every action including 'errei' which is fine, but historico stored on the card AND on flashcard_reviews collection - duplicate persistence; consider single source of truth.",
+    "Generic make_crud sorts by 'data' for collections without 'data' field (notas, decks, conjuntos, vestibulares) - works but yields undefined ordering; consider sort by 'created_at' fallback.",
+    "Conjuntos PUT uses body.model_dump() blindly - if user sends partial semanas, structure is replaced wholesale; acceptable here since UI sends full payload.",
+    "Flashcards import: tags accepts both list and string - good; but row.get('frente') / 'materia' missing default to body.default_*; ok."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "demo@aprovamed.com / demo123 (auto-seeded on backend startup)",
+  "seed_data_creation": "Demo user pre-seeded with profile, tasks, revisoes, schedule, 8 questoes, 3 redacoes, 3 simulados, 3 vestibulares (with data_prova), 3 calendario events, 2 notas, 1 deck (Biologia Celular) + 4 flashcards. Note: only seeds on first user creation.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests at /app/backend/tests/backend_test.py (35 tests, all pass). Demo creds via REACT_APP_BACKEND_URL/api/auth/login. Conjuntos template lives in CONJUNTO_TEMPLATE dict in server.py - if labels change, update test_conjuntos_auto_template assertions. SM-2 logic in _sm_update - tests cover errei/bom-new/facil-new; difícil and revisao-state transitions not exhaustively tested.",
+  "rca of the issue": "No outstanding issues."
+}

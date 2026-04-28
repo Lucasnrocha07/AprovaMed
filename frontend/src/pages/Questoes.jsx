@@ -32,7 +32,7 @@ export default function Questoes() {
       const payload = { ...form, quantidade: parseInt(form.quantidade), acertos: parseInt(form.acertos) };
       if (payload.acertos > payload.quantidade) { toast.error("Acertos > total"); return; }
       if (editing) await api.put(`/questoes/${editing}`, payload);
-      else await api.post("/questoes2", payload);
+      else await api.post("/questoes", payload);
       setOpen(false); load(); toast.success("Salvo");
     } catch { toast.error("Erro"); }
   };
